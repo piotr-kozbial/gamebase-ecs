@@ -1,6 +1,9 @@
 (ns gamebase-ecs.core1
   (:require [gamebase-ecs.event-queue :as eq]))
 
+;; A POTEM SPEC OPCJONALNIE SPRAWDZANE
+;; (ta opcjonalnosc jest jakos wbudowana w spec)
+
 (defn id? [x]
   (boolean (::kind x)))
 
@@ -53,6 +56,8 @@
 
   )
 
+;;; Entity
+
 (defn entity [key type]
   {::kind :entity
    ::type type
@@ -67,6 +72,8 @@
    ::entity-key key})
 
 (defn entity-key [x]) ;; TODO
+
+;;; Component
 
 (defn component [entity key system type]
   {::kind :component
