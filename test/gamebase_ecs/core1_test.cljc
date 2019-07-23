@@ -41,11 +41,7 @@
       (is (= (sut/to-id (sut/system :xyz)) (sut/system-id :xyz)))
       (is (= (sut/to-id (sut/entity :xyz :T)) (sut/entity-id :xyz)))
       ;; TODO: component
-      )
-
-    )
-
-  )
+      )))
 
 (deftest world
   (testing "World-id? predicate"
@@ -63,4 +59,42 @@
       (doseq [x non-ids]
         (is (not (sut/world-id? x)))))
 
-  ))
+    ))
+
+(deftest system
+  (testing "System-id? predicate"
+    (testing "against right constructors"
+      (is (sut/system-id? (sut/system :foo)))
+      (is (sut/system-id? (sut/system-id :bar))))
+    (testing "against wrong constructors"
+      (is (not (sut/system-id? (sut/world))))
+      (is (not (sut/system-id? (sut/world-id))))
+      (is (not (sut/system-id? (sut/entity :aaa :kkk))))
+      (is (not (sut/system-id? (sut/entity-id :aaa))))
+      ;; TODO component
+      )
+    (testing "against non-ids"
+      (doseq [x non-ids]
+        (is (not (sut/system-id? x))))))
+  (testing "system-key function"
+    (testing "on keyword"
+      (is (= :foo (sut/system-key :foo))))
+    (testing "on id"
+      (is (= :foo (sut/system-key (sut/system-id :foo)))))
+    (testing "on object"
+      (is (= :foo (sut/system-key (sut/system :foo))))))
+  (testing "system-id function"
+    (let [id (sut/system-id :foo)]
+      (testing "on keyword"
+        (is (= id (sut/system-id :foo))))
+      (testing "on id"
+        (is (= id (sut/system-id (sut/system-id :foo)))))
+      (testing "on object"
+        (is (= id (sut/system-id (sut/system :foo)))))
+      (testing "on component"
+        ;; TODO
+        ))
+
+
+    )
+  )

@@ -28,7 +28,7 @@
   {::kind :system
    ::system-key key})
 
-(defn system? [x]
+(defn system-id? [x]
   (= (::kind x) :system))
 
 (defn system-key [x]
@@ -67,7 +67,6 @@
    ::entity-key key})
 
 (defn entity-key [x]) ;; TODO
-(defn system-key [x]) ;; TODO
 
 (defn component [entity key system type]
   {::kind :component
