@@ -1,34 +1,93 @@
 (ns gamebase-ecs.core
   (:require [gamebase-ecs.event-queue :as eq]))
 
-;;;;;;;;;;;;;;;;;;;;;; P U B L I C ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; TODO - zrobic porzadne API
+
+Uzyc clojure.spec chyba...
+
+;; Takze dla kazdego obiektu robic predykaty, np.:
+
+
+
+MOZE NIE !!!!!!!!!!!!!
+
+
+Niech bedzie tak, ze obiekt sam jest swoim id, bo ma:
+::kind
+::id
+a component ::entity-id i ::component-key
+
+Prawdziwy obiekt ma duzo wiecej, ale mozna zrobic
+(strip-id obiekt)  -- to wytnie wszystko oprocz tych kluczy, ktore musi miec id
+
+Dzieki temu mozna bedzie przekazywac obiekty tam gdzie jest wymagane id,
+a oczywiscie kazda funkcja w API od razu zrobi na tym (strip-id).
+
+Tylko do dispatchowania multimetody handle-event zrobimy pewne przeksztalcenie, tak jak juz teraz jest.
+
+
+CZASY EVENTOW !!!!!!!!!!!!!
+Gdzies tam pisalem, ze eventy bez czasu, a tylko przy wrzucaniu nadany czas.
+Moze tak, a moze nie.
+
+A na pewno (handle-event) nie powinno brac czasu z eventa - czas powinien byc w samym world, albo osobno jeszcze wyluskany.
+Na pewno nie z event! Chyba. A moze powinno byc zapewnione, ze czas w world jest ten sam co w event i wtedy niech sobie bedzie.
+
+
+
+
+targety eventow:
+
+(is-target?)
+(is-world-target?)
+(is-system-target?)
+(is-entity-target?)
+(is-component-target?)
+
+obiekty:
+
+(is-world?)
+(is-system?)
+(is-entity?)
+(is-component?)
+
+;; 1. event targets
+
+(to-world <no-arg>|world)
+(to-system system|id|system-target|component|component-id)
+(to-entity entity|id|entity-target|component|component-id)
+(to-component component|id|component-target|entity component-key|entity-id component-key|entity-target component-key)
+
+(to entity|component|system|world|<no-arg>)
+
+(retarget [event new-target]) -- tutaj akceptowac takie argumenty, ktore mozna jednoznacznie coercowac w stylu jak powyzej
+
+;; pelne querowanie ile sie da:
+tylko nie wiem jeszcze jak nazwy
+
+component -> entity
+.            system
+.            world (?)
+entity -> world (?)
+system -> world (?)
+world -> world (?)
+world -> systems
+.        entities
+.        components
+system -> components
+entity -> components
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;; p u b l i c ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^:dynamic *with-xprint* false)
 
-;;;;; Generic schema utilities
-
-;; (defn s-literal
-;;   "schema for a single fixed value"
-;;   [v]
-;;   (s/pred #(= % v)))
-
 ;;;;; Event targets
-
-;; (def sTarget
-;;   "Schema for event targets (? then why the generic map?)"
-;;   (s/conditional
-;;    #(= (::kind %) :to-world)
-;;    ,   {s/Any s/Any}
-;;    #(= (::kind %) :to-system)
-;;    ,   {::system-id s/Any
-;;         s/Any s/Any}
-;;    #(= (::kind %) :to-entity)
-;;    ,   {::entity-id s/Any
-;;         s/Any s/Any}
-;;    #(= (::kind %) :to-component)
-;;    ,   {::entity-id s/Any
-;;         ::component-key s/Any
-;;         s/Any s/Any}))
 
 (defn to-world []
   {::kind :to-world})
@@ -71,6 +130,7 @@
     object-or-target-id))
 
 
+;; TODO - na dole jest identyczna funkcja (retarget)
 (defn change-target [event target-id]
   (assoc event ::target-id (to target-id)))
 
@@ -122,14 +182,6 @@
     ;; if not map, then not object, then what we got was id itself
     object-or-object-id))
 
-(def s-world
-  ;; {::kind (s/pred #{:world})
-  ;;  ::entities s/Any
-  ;;  ::systems s/Any
-  ;;  ::time s/Any
-  ;;  ::event-queue s/Any}
-  )
-
 (defn mk-world []
   {::kind :world
    ::entities {}
@@ -146,11 +198,6 @@
    ::type type
    ::entity-id id
    ::components {}})
-
-;; (defn add-component-to-entity [e c]
-;;   (assoc-in e [::components (::entity-id e)] )
-
-;;   )
 
 (defn mk-component [system-or-id entity-or-id key type]
   (let [v {::kind :component
@@ -194,10 +241,7 @@
         ;; these instances to be defined by system
         ;; to which component belongs
         :to-component
-        ,   [:to-component (::type object) (::msg event)]
-
-        (println (str "PROBLEM 2 !!!! >" (pr-str target-id) "< EVENT: " (pr-str event)))
-        ))))
+        ,   [:to-component (::type object) (::msg event)]))))
 
 (defmethod handle-event :default
   [_ e _]
@@ -217,11 +261,10 @@
 ;; Always returns world.
 (defn do-handle-event [world event]
 
-  (let [world0 (assoc world ::time (:gamebase.event-queue/time event))
+  (let [;; advance the time to the time of the event (TODO: we really shouldn't do that here)
+        world0 (assoc world ::time (:gamebase.event-queue/time event))
         object (resolve-target-id world0 (::target-id event))
-        ret (handle-event
-             world0
-             event object)
+        ret (handle-event world0 event object)
         new-objects-or-events
         (if (map? ret)
           [ret] ;; single object - pack into vector to make it seqable
@@ -254,6 +297,9 @@
 
 ;; TODO - event time should be already set here (to 0 by default)
 ;; (now it is only defined in event-queue, but that is inconvenient)
+;; ALBO NIE! Niech sobie zostanie bez czasu, a jak ktos nie ustawi recznie,
+;; to w momencie umieszczania w kolejce (w do-handle-event) nada sie czas
+;; biezacy z world.
 (defn mk-event [target-or-id msg time]
   (let [target-id (to target-or-id)]
     (when-not target-id
@@ -275,6 +321,7 @@
 
 ;;;;; Predefined events
 
+;; TODO - chyba nieuzywane, wywalic
 (def predefined-events
 
   ;; Just to notify that maybe some time has passed.
