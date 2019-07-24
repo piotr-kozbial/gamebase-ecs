@@ -8,7 +8,9 @@
   (boolean (::kind x)))
 
 (defn to-id [object]
-  (select-keys object [::kind ::system-key ::entity-key ::component-key]))
+  (if (= (::kind object) :component)
+    (select-keys object [::kind ::entity-key ::component-key])
+    (select-keys object [::kind ::system-key ::entity-key ::component-key])))
 
 ;;; World
 
@@ -38,14 +40,14 @@
   ;; x can be:
   ;; - system key itself (a keyword)
   ;; - a system id/object
-  ;; - a component id/object
+  ;; - a component object
   (if (keyword? x) x (::system-key x)))
 
 (defn system-id [x]
   ;; x can be:
-  ;; - system key itself (a keyword)
+  ;; - system key
   ;; - a system id/object
-  ;; - a component id/object
+  ;; - a component object
   (if (keyword? x)
     {::kind :system
      ::system-key x}
@@ -64,14 +66,28 @@
    ::entity-key key
    ::components {}})
 
-(defn entity? [x]
+(defn entity-id [x]
+  ;; x can be:
+  ;; - entity key
+  ;; - an entity id/object
+  ;; - a component id/object
+  (if (keyword? x)
+    {::kind :entity
+     ::entity-key x}
+    (if (= (::kind x) :entity)
+      (to-id x)
+      {::kind :entity
+       ::entity-key (::entity-key x)})))
+
+(defn entity-id? [x]
   (= (::kind x) :entity))
 
-(defn entity-id [key]
-  {::kind :entity
-   ::entity-key key})
-
-(defn entity-key [x]) ;; TODO
+(defn entity-key [x]
+  ;; x can be:
+  ;; - entity key itself (a keyword)
+  ;; - an entity id/object
+  ;; - a component id/object
+  (if (keyword? x) x (::entity-key x)))
 
 ;;; Component
 
@@ -80,6 +96,11 @@
    ::entity-key (entity-key entity)
    ::system-key (system-key system)
    ::type type
+   ::component-key key})
+
+(defn component-id [entity key]
+  {::kind :component
+   ::entity-key (entity-key entity)
    ::component-key key})
 
 (defn component? [x]
