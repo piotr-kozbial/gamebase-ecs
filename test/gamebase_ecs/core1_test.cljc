@@ -4,13 +4,15 @@
             #?(:clj [clojure.test :as t :refer [deftest testing is]]
                :cljs [cljs.test :as t :include-macros true])))
 
+(sut/instrument-all)
+
 (def non-ids
-  [(sut/id? 25)
-   (sut/id? :world)
-   (sut/id? {:kind :world})
-   (sut/id? {:kind :system :system-key :x})
-   (sut/id? {:kind :entity})
-   (sut/id? {:kind :component})])
+  [25
+   :world
+   {:kind :world}
+   {:kind :system :system-key :x}
+   {:kind :entity}
+   {:kind :component}])
 
 (deftest id-general
   (testing "Id? predicate"
@@ -61,7 +63,8 @@
       (is (not (sut/world-id? (sut/component-id :aaa :kkk)))))
     (testing "against non-ids"
       (doseq [x non-ids]
-        (is (not (sut/world-id? x)))))))
+        (is (not (sut/world-id? x)))))
+  ))
 
 (deftest system
   (testing "Literal"
@@ -135,8 +138,8 @@
       (is (not (sut/entity-id? (sut/world-id))))
       (is (not (sut/entity-id? (sut/system :sys))))
       (is (not (sut/entity-id? (sut/system-id :sys))))
-      (is (not (sut/system-id? (sut/component :aaa :kkk :sys :t))))
-      (is (not (sut/system-id? (sut/component-id :aaa :kkk)))))
+      (is (not (sut/entity-id? (sut/component :aaa :kkk :sys :t))))
+      (is (not (sut/entity-id? (sut/component-id :aaa :kkk)))))
     (testing "against non-ids"
       (doseq [x non-ids]
         (is (not (sut/entity-id? x))))))
@@ -160,3 +163,8 @@
       (testing "on component-id"
         (is (= id (sut/entity-id (sut/component-id :e :c))))))))
 
+(deftest component
+
+
+
+  )
