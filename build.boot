@@ -6,7 +6,8 @@
           :dependencies   '[[org.clojure/clojure "1.10.1"]
                             [org.clojure/spec.alpha "0.2.176"]
                             [adzerk/boot-test "RELEASE" :scope "test"]
-                            [orchestra "2019.02.06-1"]])
+                            [orchestra "2019.02.06-1"]
+                            [literate-clojure "0.2.6"]])
 
 (task-options!
  pom {:project     project
