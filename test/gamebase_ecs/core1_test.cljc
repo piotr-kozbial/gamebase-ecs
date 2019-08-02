@@ -1,10 +1,12 @@
 (ns gamebase-ecs.core1-test
   (:require [gamebase-ecs.core1 :as sut]
             [gamebase-ecs.event-queue :as eq]
+            #?(:clj [orchestra.spec.test :as stest]
+               :cljs [orchestra-cljs.spec.test :as stest])
             #?(:clj [clojure.test :as t :refer [deftest testing is]]
                :cljs [cljs.test :as t :include-macros true])))
 
-(sut/instrument-all)
+(stest/instrument)
 
 (def non-ids
   [25

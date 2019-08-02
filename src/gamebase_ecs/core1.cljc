@@ -1,11 +1,15 @@
 (ns gamebase-ecs.core1
   (:require [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as stest]
             [gamebase-ecs.event-queue :as eq]))
 
 (defn anything? [x] true)
 
 (s/def ::kind #{:world :system :component :entity})
+
+(s/def ::system-key keyword?)
+(s/def ::component-key keyword?)
+(s/def ::entity-key (s/or :keyword keyword? :number number?))
+(s/def ::entity-type keyword?)
 
 ;;;;; Object id's
 
@@ -37,7 +41,8 @@
 (s/def ::world (s/keys :req [::kind]))
 (s/def ::system (s/keys :req [::kind ::system-key]))
 (s/def ::entity (s/keys :req [::kind ::entity-key ::entity-type]))
-(s/def ::component (s/keys :req [::kind ::entity-key ::component-key ::system-key ::component-type]))
+(s/def ::component (s/keys :req
+                           [::kind ::entity-key ::component-key ::system-key ::component-type]))
 (defmulti object-spec ::kind)
 (defmethod object-spec :world [_] ::world)
 (defmethod object-spec :system [_] ::system)
@@ -61,21 +66,30 @@
    ::systems {}
    ::time 0
    ::event-queue (eq/create)})
+(s/fdef world
+  :args (s/cat)
+  :ret (s/and ::world ::world-id ::id))
 
 (defn world-id []
   {::kind :world})
+(s/fdef world-id
+  :args (s/cat)
+  :ret (s/and ::world-id ::id))
 
-;; (defn world-id? [x]
-;;   (= (::kind x) :world))
+(defn world-id? [x]
+  (= (::kind x) :world))
+(s/fdef world-id?
+  :args (s/cat :x anything?)
+  :ret (s/and boolean?))
 
 ;;; System
 
 (defn system [key]
   {::kind :system
    ::system-key key})
-
-;; (defn system-id? [x]
-;;   (= (::kind x) :system))
+(s/fdef system
+  :args (s/cat :key ::system-key)
+  :ret (s/and ::system ::system-id ::id))
 
 (defn system-key [x]
   ;; x can be:
@@ -83,6 +97,11 @@
   ;; - a system id/object
   ;; - a component object
   (if (keyword? x) x (::system-key x)))
+(s/fdef system-key
+  :args (s/cat :x (s/or :key ::system-key
+                        :system (s/or :system ::system, :id ::system-id)
+                        :component ::component))
+  :ret ::system-key)
 
 (defn system-id [x]
   ;; x can be:
@@ -95,17 +114,29 @@
     (if (= (::kind x) :system)
       (to-id x)
       {::kind :system
-       ::system-key (::system-key x)}))
+       ::system-key (::system-key x)})))
+(s/fdef system-id
+  :args (s/cat :x (s/or :key ::system-key
+                        :system (s/or :system ::system, :id ::system-id)
+                        :component ::component))
+  :ret (s/and ::system-id ::id))
 
-  )
+(defn system-id? [x]
+  (= (::kind x) :system))
+(s/fdef system-id?
+  :args (s/cat :x anything?)
+  :ret boolean?)
 
 ;;; Entity
 
 (defn entity [key type]
   {::kind :entity
-   ::type type
+   ::entity-type type
    ::entity-key key
    ::components {}})
+(s/fdef entity
+  :args (s/cat :key ::entity-key, :type ::entity-type)
+  :ret ::entity)
 
 (defn entity-id [x]
   ;; x can be:
@@ -119,9 +150,19 @@
       (to-id x)
       {::kind :entity
        ::entity-key (::entity-key x)})))
+(s/fdef entity-id
+  :args (s/cat :x (s/or :key ::entity-key
+                        :entity ::entity
+                        :entity-id ::entity-id
+                        :component ::component
+                        :component-id ::component-id))
+  :ret ::entity-id)
 
-;; (defn entity-id? [x]
-;;   (= (::kind x) :entity))
+(defn entity-id? [x]
+  (= (::kind x) :entity))
+(s/fdef entity-id?
+  :args (s/cat :x anything?)
+  :ret boolean?)
 
 (defn entity-key [x]
   ;; x can be:
@@ -129,6 +170,13 @@
   ;; - an entity id/object
   ;; - a component id/object
   (if (keyword? x) x (::entity-key x)))
+(s/fdef entity-key
+  :args (s/cat :x (s/or :key ::entity-key
+                        :entity ::entity
+                        :entity-id ::entity-id
+                        :component ::component
+                        :component-id ::component-id))
+  :ret ::entity-key)
 
 ;;; Component
 
@@ -146,10 +194,3 @@
 
 (defn component? [x]
   (= (::kind x) :component))
-
-
-(defn instrument-all []
-  (stest/instrument (stest/enumerate-namespace 'gamebase-ecs.core1)))
-
-(defn unstrument-all []
-  (stest/unstrument (stest/enumerate-namespace 'gamebase-ecs.core1)))
