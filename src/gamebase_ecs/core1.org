@@ -50,6 +50,35 @@
 
 *TODO*
 
+  #+BEGIN_SRC clojure
+
+    (s/def ::component (s/keys :req
+                               [::kind ::entity-key ::component-key ::system-key ::component-type]))
+
+    (s/def ::component-key keyword?)
+
+    (defmethod object-spec :component [_] ::component)
+
+    (s/def ::component-id (s/keys :req [::kind ::entity-key ::component-key]))
+    (defmethod id-spec :component [_] ::component-id)
+
+    (defn component [entity key system type]
+      {::kind :component
+       ::entity-key (entity-key entity)
+       ::system-key (system-key system)
+       ::type type
+       ::component-key key})
+
+    (defn component-id [entity key]
+      {::kind :component
+       ::entity-key (entity-key entity)
+       ::component-key key})
+
+    (defn component? [x]
+      (= (::kind x) :component))
+
+  #+END_SRC
+
 * System
 
 A system is also a very simple object: a system is identified by a system key
@@ -123,9 +152,8 @@ of the system to which it belongs).
 
   #+END_SRC
 
-
 * Entity
-
+  
   *TODO*
 
   #+BEGIN_SRC clojure
@@ -137,7 +165,59 @@ of the system to which it belongs).
     (defmethod object-spec :entity [_] ::entity)
   #+END_SRC
 
+  #+BEGIN_SRC clojure
 
+    (defn entity [key type]
+      {::kind :entity
+       ::entity-type type
+       ::entity-key key
+       ::components {}})
+    (s/fdef entity
+      :args (s/cat :key ::entity-key, :type ::entity-type)
+      :ret ::entity)
+
+    (defn entity-id [x]
+      ;; x can be:
+      ;; - entity key
+      ;; - an entity id/object
+      ;; - a component id/object
+      (if (keyword? x)
+        {::kind :entity
+         ::entity-key x}
+        (if (= (::kind x) :entity)
+          (to-id x)
+          {::kind :entity
+           ::entity-key (::entity-key x)})))
+    (s/fdef entity-id
+      :args (s/cat :x (s/or :key ::entity-key
+                            :entity ::entity
+                            :entity-id ::entity-id
+                            :component ::component
+                            :component-id ::component-id))
+      :ret ::entity-id)
+
+    (defn entity-id? [x]
+      (= (::kind x) :entity))
+    (s/fdef entity-id?
+      :args (s/cat :x anything?)
+      :ret boolean?)
+
+    (defn entity-key [x]
+      ;; x can be:
+      ;; - entity key itself (a keyword)
+      ;; - an entity id/object
+      ;; - a component id/object
+      (if (keyword? x) x (::entity-key x)))
+    (s/fdef entity-key
+      :args (s/cat :x (s/or :key ::entity-key
+                            :entity ::entity
+                            :entity-id ::entity-id
+                            :component ::component
+                            :component-id ::component-id))
+      :ret ::entity-key)
+
+  #+END_SRC
+  
 * World
 
   There can be only one world, so to identify the world we only need to provide
@@ -213,12 +293,6 @@ of the system to which it belongs).
 * Inne
 
   #+BEGIN_SRC clojure
-    (s/def ::component-key keyword?)
-
-    ;;;;; Object id's
-
-    (s/def ::component-id (s/keys :req [::kind ::entity-key ::component-key]))
-    (defmethod id-spec :component [_] ::component-id)
 
     ;; NOTE. The `id?` predicate is very simple, as it only checks for the presence of the ::kind attribute.
     ;; We assume that if the API is properly used and no external code manually creates maps with
@@ -232,16 +306,9 @@ of the system to which it belongs).
 
   #+END_SRC
 
-* Objects
-
   Each object is its own id, but not vice-versa.
 
   #+BEGIN_SRC clojure
-    (s/def ::component (s/keys :req
-                               [::kind ::entity-key ::component-key ::system-key ::component-type]))
-    (defmulti object-spec ::kind)
-    (defmethod object-spec :component [_] ::component)
-    (s/def ::object (s/multi-spec id-spec ::kind))
 
     (defn to-id [object]
       (if (= (::kind object) :component)
@@ -254,81 +321,3 @@ of the system to which it belongs).
   #+END_SRC
 
 
-
-
-
-* Entity
-
-  #+BEGIN_SRC clojure
-
-    (defn entity [key type]
-      {::kind :entity
-       ::entity-type type
-       ::entity-key key
-       ::components {}})
-    (s/fdef entity
-      :args (s/cat :key ::entity-key, :type ::entity-type)
-      :ret ::entity)
-
-    (defn entity-id [x]
-      ;; x can be:
-      ;; - entity key
-      ;; - an entity id/object
-      ;; - a component id/object
-      (if (keyword? x)
-        {::kind :entity
-         ::entity-key x}
-        (if (= (::kind x) :entity)
-          (to-id x)
-          {::kind :entity
-           ::entity-key (::entity-key x)})))
-    (s/fdef entity-id
-      :args (s/cat :x (s/or :key ::entity-key
-                            :entity ::entity
-                            :entity-id ::entity-id
-                            :component ::component
-                            :component-id ::component-id))
-      :ret ::entity-id)
-
-    (defn entity-id? [x]
-      (= (::kind x) :entity))
-    (s/fdef entity-id?
-      :args (s/cat :x anything?)
-      :ret boolean?)
-
-    (defn entity-key [x]
-      ;; x can be:
-      ;; - entity key itself (a keyword)
-      ;; - an entity id/object
-      ;; - a component id/object
-      (if (keyword? x) x (::entity-key x)))
-    (s/fdef entity-key
-      :args (s/cat :x (s/or :key ::entity-key
-                            :entity ::entity
-                            :entity-id ::entity-id
-                            :component ::component
-                            :component-id ::component-id))
-      :ret ::entity-key)
-
-  #+END_SRC
-  
-* Component
-
-  #+BEGIN_SRC clojure
-
-    (defn component [entity key system type]
-      {::kind :component
-       ::entity-key (entity-key entity)
-       ::system-key (system-key system)
-       ::type type
-       ::component-key key})
-
-    (defn component-id [entity key]
-      {::kind :component
-       ::entity-key (entity-key entity)
-       ::component-key key})
-
-    (defn component? [x]
-      (= (::kind x) :component))
-
-  #+END_SRC
