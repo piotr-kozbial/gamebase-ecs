@@ -3,15 +3,124 @@
 
 * Helper schemas
 
+  Sometimes we'll want a schema to say that we accept any value at all:
+
   #+BEGIN_SRC clojure
     (defn anything? [x] true)
   #+END_SRC
 
-* Object id's
+* Objects and object id's
+
+  Each object will be a map with a mandatory key =::kind= to tell the kind of
+  object. We'll have four kinds of objects and so four possible values of the
+  key:
 
   #+BEGIN_SRC clojure
     (s/def ::kind #{:world :system :component :entity})
+  #+END_SRC
 
+  Certain kinds of objects (all except world in fact) will have additional
+  required keys. Some of them will serve to uniquely identify the particular
+  object, others will contain additional data. An so we will use a sub-map of an
+  object as its /identifier/, by keeping only the identifying keys (and
+  =::kind= of course). We will not however exclude other keys from an identifier,
+  so in fact every object will be its own valid identifier. Obviously, in practice,
+  we'll want to use identifiers stripped down to minimum.
+
+  To formalize the object identifiers we'll use a multi-schema:
+
+  #+BEGIN_SRC clojure
+    (defmulti id-spec ::kind)
+    (s/def ::id (s/multi-spec id-spec ::kind))
+  #+END_SRC
+
+  So for every possible value of =::kind= we will provide an =id-spec= method
+  defining required keys for an identifier of that particular kind of object.
+  Thus the =::id= schema defines an object identifier of any kind.
+  We will also define specific schemas for each kind.
+
+  In the same way we'll define specs for objects themselves:
+
+  #+BEGIN_SRC clojure
+    (defmulti object-spec ::kind)
+    (s/def ::object (s/multi-spec id-spec ::kind))
+  #+END_SRC
+
+* World
+
+  There can be only one world, so to identify the world we only need to provide
+  the =::kind=, so here's a schema for the world id and the world portion of the
+  =::id= schema:
+
+  #+BEGIN_SRC clojure
+    (s/def ::world-id (s/and (s/keys :req [::kind]) #(= :world (::kind %))))
+    (defmethod id-spec :world [_] ::world-id)
+  #+END_SRC
+
+  Here are schemas for the world object:
+
+  #+BEGIN_SRC clojure
+    (s/def ::world
+      (s/and
+       (s/keys :req [::kind ::entities ::systems ::time ::event-queue])
+       #(= :world (::kind %))))
+
+    (defmethod object-spec :world [_] ::world)
+  #+END_SRC
+
+  As we could see above, a world object holds everything:
+
+  the map of entities (which will contain components):
+
+  #+BEGIN_SRC clojure
+  (s/def ::entities (s/map-of ::entity-key ::entity))
+  #+END_SRC
+
+  the map of systems:
+
+  #+BEGIN_SRC clojure
+  (s/def ::systems (s/map-of ::system-key ::system))
+  #+END_SRC
+
+  current time:
+
+  #+BEGIN_SRC clojure
+  (s/def ::time integer?)
+  #+END_SRC
+
+  and an event queue (TODO: spec in that module).
+
+  Here's a function to create a new, empty world object:
+
+  #+BEGIN_SRC clojure
+
+    (defn world []
+      {::kind :world
+       ::entities {}
+       ::systems {}
+       ::time 0
+       ::event-queue (eq/create)})
+    (s/fdef world
+      :args (s/cat)
+      :ret (s/and ::world ::world-id ::id))
+
+  #+END_SRC
+
+  and functions to create the world id and to check if a given value (any value)
+  is a world id or not:
+
+  #+BEGIN_SRC clojure
+    (defn world-id [] {::kind :world})
+    (s/fdef world-id :args (s/cat) :ret (s/and ::world-id ::id))
+
+    (defn world-id? [x] (= (::kind x) :world))
+    (s/fdef world-id? :args (s/cat :x anything?) :ret (s/and boolean?))
+
+  #+END_SRC
+
+* Inne
+
+  #+BEGIN_SRC clojure
     (s/def ::system-key keyword?)
     (s/def ::component-key keyword?)
     (s/def ::entity-key (s/or :keyword keyword? :number number?))
@@ -19,16 +128,12 @@
 
     ;;;;; Object id's
 
-    (s/def ::world-id (s/keys :req [::kind]))
     (s/def ::system-id (s/keys :req [::kind ::system-key]))
     (s/def ::entity-id (s/keys :req [::kind ::entity-key]))
     (s/def ::component-id (s/keys :req [::kind ::entity-key ::component-key]))
-    (defmulti id-spec ::kind)
-    (defmethod id-spec :world [_] ::world-id)
     (defmethod id-spec :system [_] ::system-id)
     (defmethod id-spec :entity [_] ::entity-id)
     (defmethod id-spec :component [_] ::component-id)
-    (s/def ::id (s/multi-spec id-spec ::kind))
 
     ;; NOTE. The `id?` predicate is very simple, as it only checks for the presence of the ::kind attribute.
     ;; We assume that if the API is properly used and no external code manually creates maps with
@@ -47,13 +152,11 @@
   Each object is its own id, but not vice-versa.
 
   #+BEGIN_SRC clojure
-    (s/def ::world (s/keys :req [::kind]))
     (s/def ::system (s/keys :req [::kind ::system-key]))
     (s/def ::entity (s/keys :req [::kind ::entity-key ::entity-type]))
     (s/def ::component (s/keys :req
                                [::kind ::entity-key ::component-key ::system-key ::component-type]))
     (defmulti object-spec ::kind)
-    (defmethod object-spec :world [_] ::world)
     (defmethod object-spec :system [_] ::system)
     (defmethod object-spec :entity [_] ::entity)
     (defmethod object-spec :component [_] ::component)
@@ -71,31 +174,6 @@
 
 * World
 
-  #+BEGIN_SRC clojure
-
-    (defn world []
-      {::kind :world
-       ::entities {}
-       ::systems {}
-       ::time 0
-       ::event-queue (eq/create)})
-    (s/fdef world
-      :args (s/cat)
-      :ret (s/and ::world ::world-id ::id))
-
-    (defn world-id []
-      {::kind :world})
-    (s/fdef world-id
-      :args (s/cat)
-      :ret (s/and ::world-id ::id))
-
-    (defn world-id? [x]
-      (= (::kind x) :world))
-    (s/fdef world-id?
-      :args (s/cat :x anything?)
-      :ret (s/and boolean?))
-
-  #+END_SRC
 
 * System
 
