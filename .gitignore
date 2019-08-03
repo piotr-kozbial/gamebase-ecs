@@ -10,3 +10,6 @@ pom.xml.asc
 /.nrepl-port
 .hgignore
 .hg/
+/src/gamebase_ecs/auto/core1.el
+/src/gamebase_ecs/core1.pdf
+/src/gamebase_ecs/core1.tex
