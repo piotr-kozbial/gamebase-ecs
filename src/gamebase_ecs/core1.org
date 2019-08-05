@@ -327,20 +327,30 @@ of the system to which it belongs).
 
   #+BEGIN_SRC clojure :load no
 
-  ;*** Objects *************************************************************
+  -key < -id <= -object
 
+
+  CHYBA DODAMY ::system-key do component-id, zeby bylo ladnie wszedzie
+
+  ;*** Objects *************************************************************
+  ::id ::object (id? <any>) (to-id <id>)
   ;;; World ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  #_schemas:      ::world-id ::world
-  #_constructors: (world-id) (world)
-  #_predicates:   (world-id? <any>)
+  ::world-id ::world (world-id) (world) (world-id? <any>)
   ;;; System ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ::system-key ::system-id ::system
+  (system <system-key>)
+  (system-id <system key>|<component>) (system-id? <any>)
+  (system-key <system-key>|<component>)
   ;;; Component ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ::component-key ::component-id ::component
+  (component <entity-key> <system-key> <component-type>)
+  (component-id <entity-key> <component-key>)
+  (component? <any>)
   ;;; Entity ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  #_schemas:      ::system-key ::system-id ::system
-  #_constructors: (system-id <system key>) (system <system-key>)
-  #_predicates:   (system-id? <any>)
-  #_extractors:   (system-key <system-key>|<system-id>|<system>|<component>)
-                  (system-id  <system-key>|<system-id>|<system>|<component>)
+  ::entity-key ::entity-id ::entity ::entity-type
+  (entity <entity key> <entity type>)
+  (entity-id <entity key>|<component-id>)
+  (entity-id?)
 
   ;*** Querying ************************************************************
 
