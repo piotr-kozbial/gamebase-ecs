@@ -321,3 +321,36 @@ of the system to which it belongs).
   #+END_SRC
 
 
+
+* Cheat-sheet?
+
+
+  #+BEGIN_SRC clojure :load no
+
+  ;*** Objects *************************************************************
+
+  ;;; World ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  #_schemas:      ::world-id ::world
+  #_constructors: (world-id) (world)
+  #_predicates:   (world-id? <any>)
+  ;;; System ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;; Component ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;; Entity ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  #_schemas:      ::system-key ::system-id ::system
+  #_constructors: (system-id <system key>) (system <system-key>)
+  #_predicates:   (system-id? <any>)
+  #_extractors:   (system-key <system-key>|<system-id>|<system>|<component>)
+                  (system-id  <system-key>|<system-id>|<system>|<component>)
+
+  ;*** Querying ************************************************************
+
+  ; e.g. (all-systems <world>)
+
+  ;*** Modifying ***********************************************************
+
+  ; e.g. (remove-entity ...)
+
+  ;*** Events **************************************************************
+
+  #+END_SRC
+
