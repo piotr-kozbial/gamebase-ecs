@@ -332,21 +332,20 @@ of the system to which it belongs).
 
   CHYBA DODAMY ::system-key do component-id, zeby bylo ladnie wszedzie
 
-  ;*** Objects *************************************************************
   ::id ::object (id? <any>) (to-id <id>)
-  ;;; World ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   ::world-id ::world (world-id) (world) (world-id? <any>)
-  ;;; System ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   ::system-key ::system-id ::system
   (system <system-key>)
   (system-id <system key>|<component>) (system-id? <any>)
   (system-key <system-key>|<component>)
-  ;;; Component ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   ::component-key ::component-id ::component
   (component <entity-key> <system-key> <component-type>)
   (component-id <entity-key> <component-key>)
   (component? <any>)
-  ;;; Entity ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   ::entity-key ::entity-id ::entity ::entity-type
   (entity <entity key> <entity type>)
   (entity-id <entity key>|<component-id>)
