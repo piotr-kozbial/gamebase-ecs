@@ -9,42 +9,75 @@
     (defn anything? [x] true)
   #+END_SRC
 
-* Objects and object id's
+* Objects and object id's and keys
 
-  Each object will be a map with a mandatory key =::kind= to tell the kind of
-  object. We'll have four kinds of objects and so four possible values of the
-  key:
+  Each object will be a plain /map/ with a mandatory key =::kind= to tell the
+  kind of object. We have four kinds of objects and so four possible values
+  of the key:
 
   #+BEGIN_SRC clojure
     (s/def ::kind #{:world :system :component :entity})
   #+END_SRC
 
   Certain kinds of objects (all except world in fact) will have additional
-  required keys. Some of them will serve to uniquely identify the particular
-  object, others will contain additional data. An so we will use a sub-map of an
-  object as its /identifier/, by keeping only the identifying keys (and
-  =::kind= of course). We will not however exclude other keys from an identifier,
-  so in fact every object will be its own valid identifier. Obviously, in practice,
-  we'll want to use identifiers stripped down to minimum.
-
-  To formalize the object identifiers we'll use a multi-schema:
+  required keys with the purpose of uniquely identifying the particular object
+  and those will form the object identifier, or /object id/. For some kinds
+  we'll require more information in the object id, just to help in lookup and
+  dispatch operations. In any case, an object id will be a sub-map of the actual
+  object. We'll define schemas for each kind of object id below, but we also
+  want to have a schema for any object id at all:
 
   #+BEGIN_SRC clojure
-    (defmulti id-spec ::kind)
-    (s/def ::id (s/multi-spec id-spec ::kind))
+    (s/def ::id (s/or :world     ::world-id
+                      :system    ::system-id
+                      :component ::component-id
+                      :entity    ::entity-id))
   #+END_SRC
 
-  So for every possible value of =::kind= we will provide an =id-spec= method
-  defining required keys for an identifier of that particular kind of object.
-  Thus the =::id= schema defines an object identifier of any kind.
-  We will also define specific schemas for each kind.
-
-  In the same way we'll define specs for objects themselves:
-
+  Similarly, we define a schema for an object, leaving the definition of schemas
+  for particular kins for later:
+  
   #+BEGIN_SRC clojure
-    (defmulti object-spec ::kind)
-    (s/def ::object (s/multi-spec id-spec ::kind))
+    (s/def ::object (s/or :world     ::world
+                          :system    ::system
+                          :component ::component
+                          :entity    ::entity))
   #+END_SRC
+
+  To reiterate, an object id is a sub-map of the object, but since schemas are
+  open-ended, also the object as a whole, with more keys in the map, can serve
+  as its own identifier. In other words, if a value matches the =::object=
+  schema, it will also match the =::id= schema. It will become apparent when we
+  get to defining the particular kinds of objects.
+
+  In most object id definitions we'll use a /key/ (or two), being just a keyword
+  (or sometimes a number), to uniquely identify the object among its kind (or
+  within a parent object), so for example an entity id will consist of the
+  =::kind= key with value =:entity= and an additional key =::entity-key= with a
+  keyword or integer value, for example ={::kind :entity, :entity-key 10}=. So
+  in a context where we know that we're talking only about entities, the value
+  of the entity key (e.g. =10=), will be enough to identify an entity. In
+  general usage, however, we recommend employing full object identifiers.
+
+* API Conventions  
+
+  Since an object can stand for its own identifier and sometimes in context an
+  object key is as good as an identifier, we'll want to make our API flexible
+  and make function parameters accept any of those forms of object
+  identification whenever that makes sense. This will be apparent both in the
+  implementation /and in the schemas/ of the API functions, but we will also
+  make a naming convention for such parameters. The convention is: adding an
+  asterisk to the name of a parameter that can accept some of those multiple
+  forms. The rules can be informally presented like this:
+
+  =key < id < object=
+
+  More specifically, a parameter name ending with =-key*= means that it can
+  accept a key, an id or an object, for example =entity-key*= will be a
+  parameter that can accept an entity key, an entity id or an entity object.
+
+  Similarly, a parameter ending with =-id*= will accept either an id or an
+  object, but /not/ a key.
 
 * Component
 
