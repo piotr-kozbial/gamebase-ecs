@@ -48,19 +48,51 @@
 
 * Component
 
-*TODO*
+** Schemas
+
+  A component will be identified by a key
 
   #+BEGIN_SRC clojure
-
-    (s/def ::component (s/keys :req
-                               [::kind ::entity-key ::component-key ::system-key ::component-type]))
-
     (s/def ::component-key keyword?)
+  #+END_SRC
 
+  which is unique /in context of the entity/ to which the component belongs. In
+  other words, we'll need to use both the entity key (to be defined later) and
+  the component key to form a unique component identifier. Of course we'll also
+  set =::kind= to =:component=.
+
+  To simplify lookup operations, we'll also include the key of the system
+  (again, defined later) to which the component belongs and the component type
+  which will be used in dispatching of multimethods to give each type of
+  component a different behavior. Here's then the schema of a component id:
+
+  #+BEGIN_SRC clojure
+    (s/def ::component-id (s/and
+                           (s/keys :req [::kind
+                                         ::entity-key ::component-key
+                                         ::system-key ::component-type])
+                           #(= (::kind %) :component)))
+  #+END_SRC
+
+  A component /object/ will consist of the component id and any other keys
+  dependent on the type of the component, so our schema for a component
+  object is the same as for the component id:
+
+  #+BEGIN_SRC clojure
+    (s/def ::component ::component-id)
+  #+END_SRC
+
+  And finally we fill the component methods for the general =::object= and
+  =::id= schemas:
+
+  #+BEGIN_SRC clojure
     (defmethod object-spec :component [_] ::component)
-
-    (s/def ::component-id (s/keys :req [::kind ::entity-key ::component-key]))
     (defmethod id-spec :component [_] ::component-id)
+  #+END_SRC
+
+** Constructors
+  
+  #+BEGIN_SRC clojure
 
     (defn component [entity key system type]
       {::kind :component
@@ -73,6 +105,15 @@
       {::kind :component
        ::entity-key (entity-key entity)
        ::component-key key})
+
+    (defn component? [x]
+      (= (::kind x) :component))
+
+  #+END_SRC
+
+** Predicates / operations
+
+  #+BEGIN_SRC clojure
 
     (defn component? [x]
       (= (::kind x) :component))
@@ -343,7 +384,11 @@ of the system to which it belongs).
 
   ::component-key ::component-id ::component
   (component <entity-key> <system-key> <component-type>)
-  (component-id <entity-key> <component-key>)
+  (component-id <entity-key> <component-key>) ---- w takich miejscach trzeba tez dodawac
+                                                   konwersje z obiektu:
+                                                   (component-id <component>),
+                                                   a wlasciwie:
+                                                   (component-id <component-id)
   (component? <any>)
 
   ::entity-key ::entity-id ::entity ::entity-type
