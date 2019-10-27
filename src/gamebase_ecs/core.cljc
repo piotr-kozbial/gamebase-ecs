@@ -1,7 +1,23 @@
 (ns gamebase-ecs.core
   (:require [gamebase-ecs.event-queue :as eq]))
 
+(defmulti query (fn [object query-key & args]
+                  (case (::kind object)
+                    ;; these instances to be handled on a global (world) level
+                    :world
+                    ,   [:world query-key]
+                    ;; these instances to be defined by given system
+                    :system
+                    ,   [:system (::system-id object) query-key]
+                    ;; these instances to be defined next to entity constructor
+                    :entity
+                    ,   [:entity (::type object) query-key]
+                    ;; these instances to be defined by system
+                    ;; to which component belongs
+                    :component
+                    ,   [:component (::type object) query-key])))
 
+(defmethod query :default [& _] nil)
 
 ;;;;;     ;; TODO - zrobic porzadne API
 ;;;;;     
