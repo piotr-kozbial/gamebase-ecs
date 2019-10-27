@@ -3,91 +3,113 @@
 
 
 
-;; TODO - zrobic porzadne API
-
-Uzyc clojure.spec chyba...
-
-;; Takze dla kazdego obiektu robic predykaty, np.:
-
-
-
-MOZE NIE !!!!!!!!!!!!!
-
-
-Niech bedzie tak, ze obiekt sam jest swoim id, bo ma:
-::kind
-::id
-a component ::entity-id i ::component-key
-
-Prawdziwy obiekt ma duzo wiecej, ale mozna zrobic
-(strip-id obiekt)  -- to wytnie wszystko oprocz tych kluczy, ktore musi miec id
-
-Dzieki temu mozna bedzie przekazywac obiekty tam gdzie jest wymagane id,
-a oczywiscie kazda funkcja w API od razu zrobi na tym (strip-id).
-
-Tylko do dispatchowania multimetody handle-event zrobimy pewne przeksztalcenie, tak jak juz teraz jest.
-
-
-CZASY EVENTOW !!!!!!!!!!!!!
-Gdzies tam pisalem, ze eventy bez czasu, a tylko przy wrzucaniu nadany czas.
-Moze tak, a moze nie.
-
-A na pewno (handle-event) nie powinno brac czasu z eventa - czas powinien byc w samym world, albo osobno jeszcze wyluskany.
-Na pewno nie z event! Chyba. A moze powinno byc zapewnione, ze czas w world jest ten sam co w event i wtedy niech sobie bedzie.
-
-
-
-
-targety eventow:
-
-(is-target?)
-(is-world-target?)
-(is-system-target?)
-(is-entity-target?)
-(is-component-target?)
-
-obiekty:
-
-(is-world?)
-(is-system?)
-(is-entity?)
-(is-component?)
-
-;; 1. event targets
-
-(to-world <no-arg>|world)
-(to-system system|id|system-target|component|component-id)
-(to-entity entity|id|entity-target|component|component-id)
-(to-component component|id|component-target|entity component-key|entity-id component-key|entity-target component-key)
-
-(to entity|component|system|world|<no-arg>)
-
-(retarget [event new-target]) -- tutaj akceptowac takie argumenty, ktore mozna jednoznacznie coercowac w stylu jak powyzej
-
-;; pelne querowanie ile sie da:
-tylko nie wiem jeszcze jak nazwy
-
-component -> entity
-.            system
-.            world (?)
-entity -> world (?)
-system -> world (?)
-world -> world (?)
-world -> systems
-.        entities
-.        components
-system -> components
-entity -> components
-
-
-
+;;;;;     ;; TODO - zrobic porzadne API
+;;;;;     
+;;;;;     Uzyc clojure.spec chyba...
+;;;;;     
+;;;;;     ;; Takze dla kazdego obiektu robic predykaty, np.:
+;;;;;     
+;;;;;     
+;;;;;     
+;;;;;     MOZE NIE !!!!!!!!!!!!!
+;;;;;     
+;;;;;     
+;;;;;     Niech bedzie tak, ze obiekt sam jest swoim id, bo ma:
+;;;;;     ::kind
+;;;;;     ::id
+;;;;;     a component ::entity-id i ::component-key
+;;;;;     
+;;;;;     Prawdziwy obiekt ma duzo wiecej, ale mozna zrobic
+;;;;;     (strip-id obiekt)  -- to wytnie wszystko oprocz tych kluczy, ktore musi miec id
+;;;;;     
+;;;;;     Dzieki temu mozna bedzie przekazywac obiekty tam gdzie jest wymagane id,
+;;;;;     a oczywiscie kazda funkcja w API od razu zrobi na tym (strip-id).
+;;;;;     
+;;;;;     Tylko do dispatchowania multimetody handle-event zrobimy pewne przeksztalcenie, tak jak juz teraz jest.
+;;;;;     
+;;;;;     
+;;;;;     CZASY EVENTOW !!!!!!!!!!!!!
+;;;;;     Gdzies tam pisalem, ze eventy bez czasu, a tylko przy wrzucaniu nadany czas.
+;;;;;     Moze tak, a moze nie.
+;;;;;     
+;;;;;     A na pewno (handle-event) nie powinno brac czasu z eventa - czas powinien byc w samym world, albo osobno jeszcze wyluskany.
+;;;;;     Na pewno nie z event! Chyba. A moze powinno byc zapewnione, ze czas w world jest ten sam co w event i wtedy niech sobie bedzie.
+;;;;;     
+;;;;;     
+;;;;;     
+;;;;;     
+;;;;;     targety eventow:
+;;;;;     
+;;;;;     (is-target?)
+;;;;;     (is-world-target?)
+;;;;;     (is-system-target?)
+;;;;;     (is-entity-target?)
+;;;;;     (is-component-target?)
+;;;;;     
+;;;;;     obiekty:
+;;;;;     
+;;;;;     (is-world?)
+;;;;;     (is-system?)
+;;;;;     (is-entity?)
+;;;;;     (is-component?)
+;;;;;     
+;;;;;     ;; 1. event targets
+;;;;;     
+;;;;;     (to-world <no-arg>|world)
+;;;;;     (to-system system|id|system-target|component|component-id)
+;;;;;     (to-entity entity|id|entity-target|component|component-id)
+;;;;;     (to-component component|id|component-target|entity component-key|entity-id component-key|entity-target component-key)
+;;;;;     
+;;;;;     (to entity|component|system|world|<no-arg>)
+;;;;;     
+;;;;;     (retarget [event new-target]) -- tutaj akceptowac takie argumenty, ktore mozna jednoznacznie coercowac w stylu jak powyzej
+;;;;;     
+;;;;;     ;; pelne querowanie ile sie da:
+;;;;;     tylko nie wiem jeszcze jak nazwy
+;;;;;     
+;;;;;     component -> entity
+;;;;;     .            system
+;;;;;     .            world (?)
+;;;;;     entity -> world (?)
+;;;;;     system -> world (?)
+;;;;;     world -> world (?)
+;;;;;     world -> systems
+;;;;;     .        entities
+;;;;;     .        components
+;;;;;     system -> components
+;;;;;     entity -> components
+;;;;;     
 
 
-;;;;;;;;;;;;;;;;;;;;;; p u b l i c ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;; P U B L I C ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^:dynamic *with-xprint* false)
 
+;;;;; Generic schema utilities
+
+;; (defn s-literal
+;;   "schema for a single fixed value"
+;;   [v]
+;;   (s/pred #(= % v)))
+
 ;;;;; Event targets
+
+;; (def sTarget
+;;   "Schema for event targets (? then why the generic map?)"
+;;   (s/conditional
+;;    #(= (::kind %) :to-world)
+;;    ,   {s/Any s/Any}
+;;    #(= (::kind %) :to-system)
+;;    ,   {::system-id s/Any
+;;         s/Any s/Any}
+;;    #(= (::kind %) :to-entity)
+;;    ,   {::entity-id s/Any
+;;         s/Any s/Any}
+;;    #(= (::kind %) :to-component)
+;;    ,   {::entity-id s/Any
+;;         ::component-key s/Any
+;;         s/Any s/Any}))
 
 (defn to-world []
   {::kind :to-world})
@@ -182,6 +204,14 @@ entity -> components
     ;; if not map, then not object, then what we got was id itself
     object-or-object-id))
 
+(def s-world
+  ;; {::kind (s/pred #{:world})
+  ;;  ::entities s/Any
+  ;;  ::systems s/Any
+  ;;  ::time s/Any
+  ;;  ::event-queue s/Any}
+  )
+
 (defn mk-world []
   {::kind :world
    ::entities {}
@@ -198,6 +228,11 @@ entity -> components
    ::type type
    ::entity-id id
    ::components {}})
+
+;; (defn add-component-to-entity [e c]
+;;   (assoc-in e [::components (::entity-id e)] )
+
+;;   )
 
 (defn mk-component [system-or-id entity-or-id key type]
   (let [v {::kind :component
@@ -262,7 +297,7 @@ entity -> components
 (defn do-handle-event [world event]
 
   (let [;; advance the time to the time of the event (TODO: we really shouldn't do that here)
-        world0 (assoc world ::time (:gamebase.event-queue/time event))
+        world0 (assoc world ::time (::time event))
         object (resolve-target-id world0 (::target-id event))
         ret (handle-event world0 event object)
         new-objects-or-events
@@ -283,6 +318,13 @@ entity -> components
 
     world''))
 
+(defn advance-one-event [world]
+  (let [s-t (eq/soonest-event-time (::event-queue world))]
+    (assert s-t)
+    (let [[event event-queue'] (eq/take-event (::event-queue world))]
+      (do-handle-event
+       (assoc world ::event-queue event-queue' ::time s-t)
+       event))))
 
 (defn advance-until-time [world time]
   (loop [wrl world]
@@ -310,7 +352,8 @@ entity -> components
       (/ 1 0))
     {::target-id target-id
      ::msg msg
-     :gamebase.event-queue/time time}))
+     :priority 0
+     :gamebase-ecs.event-queue/time time}))
 
 ;;;;; Putting events into queue
 
@@ -406,3 +449,8 @@ nil
   (if (map? entity-or-id)
     entity-or-id ;; TODO - should check more?
     (get-entity-by-key world entity-or-id)))
+
+
+
+(defn time [event]
+  (::eq/time event))

@@ -1,6 +1,50 @@
 # -*- encoding:utf-8 Mode: POLY-ORG;  -*- --- 
 #+STARTUP: noindent
 
+
+
+
+
+
+
+
+
+UWAGA - JEDNA SPRAWA:
+Wygodne konstruowanie entities, np. dodawanie komponentow.
+Teraz trzeba glupowato tworzyc tak:
+   (let [entity (mk-entity....)]
+zeby dodawac komponenty przez assoc,
+i w dodatku przekazywac entity do konstruktorow komponentow.
+Bez sensu.
+
+Niech bedzie tak, ze komponent *mozna* stworzyc bez entity,
+taki nie podpiety, z :entity-id = nil, a potem wstawienie
+go do entity bedzie tak naprawde polegalo na:
+   - zmodyfikowaniu komponentu przez ustawienie mu :entity-id
+   - dodaniu go do entity
+   - i takie zmodyfikowane entity zwracamy
+
+Czyli:
+
+(->> (mk-entity ...)
+     (ecs/with-component :engine (sys-movement/mk-engine <argumenty, ale nie entity-id, bo nie znamy>))
+     (ecs/with-component ...
+     (ecs/with-component ...
+)
+
+Btw. "expression problem" !!!
+Jezeli jakas nazwa funkcji mialaby miec sens dla roznych obiektow,
+to wtedy multi-metoda (choc moze i case w funkcji, jesli z gory wiadomo,
+jakie moga byc rodzaje obiektow).
+
+
+
+
+
+
+
+
+
 * Helper schemas
 
   Sometimes we'll want a schema to say that we accept any value at all:
@@ -22,7 +66,7 @@
   Certain kinds of objects (all except world in fact) will have additional
   required keys with the purpose of uniquely identifying the particular object
   and those will form the object identifier, or /object id/. For some kinds
-  we'll require more information in the object id, just to help in lookup and
+  we'll require /more/ information in the object id, just to help in lookup and
   dispatch operations. In any case, an object id will be a sub-map of the actual
   object. We'll define schemas for each kind of object id below, but we also
   want to have a schema for any object id at all:
@@ -34,8 +78,8 @@
                       :entity    ::entity-id))
   #+END_SRC
 
-  Similarly, we define a schema for an object, leaving the definition of schemas
-  for particular kins for later:
+  Similarly, we define a schema for an object, postponing the definition of schemas
+  for particular kinds until later:
   
   #+BEGIN_SRC clojure
     (s/def ::object (s/or :world     ::world
@@ -45,18 +89,18 @@
   #+END_SRC
 
   To reiterate, an object id is a sub-map of the object, but since schemas are
-  open-ended, also the object as a whole, with more keys in the map, can serve
-  as its own identifier. In other words, if a value matches the =::object=
-  schema, it will also match the =::id= schema. It will become apparent when we
-  get to defining the particular kinds of objects.
+  open-ended, also the whole object, with more keys in the map, can serve as its
+  own identifier. In other words, if a value matches the =::object= schema, it
+  will also match the =::id= schema. It will become apparent when we get to
+  defining the particular kinds of objects.
 
-  In most object id definitions we'll use a /key/ (or two), being just a keyword
+  In most object id definitions we'll use a /key/, being just a keyword
   (or sometimes a number), to uniquely identify the object among its kind (or
   within a parent object), so for example an entity id will consist of the
   =::kind= key with value =:entity= and an additional key =::entity-key= with a
-  keyword or integer value, for example ={::kind :entity, :entity-key 10}=. So
+  keyword or integer value, for example ={::kind :entity, ::entity-key 10}=. So
   in a context where we know that we're talking only about entities, the value
-  of the entity key (e.g. =10=), will be enough to identify an entity. In
+  of the entity key (e.g. 10) will be enough to identify an entity. In
   general usage, however, we recommend employing full object identifiers.
 
 * API Conventions  
@@ -65,10 +109,10 @@
   object key is as good as an identifier, we'll want to make our API flexible
   and make function parameters accept any of those forms of object
   identification whenever that makes sense. This will be apparent both in the
-  implementation /and in the schemas/ of the API functions, but we will also
-  make a naming convention for such parameters. The convention is: adding an
-  asterisk to the name of a parameter that can accept some of those multiple
-  forms. The rules can be informally presented like this:
+  implementation and in the schemas of the API functions, but we will also make
+  a naming convention for such parameters. The convention is: adding an asterisk
+  to the end of the name of a parameter. The semantic rules can be informally
+  presented like this:
 
   =key < id < object=
 
@@ -79,77 +123,75 @@
   Similarly, a parameter ending with =-id*= will accept either an id or an
   object, but /not/ a key.
 
-* Component
+* World
 
-** Schemas
-
-  A component will be identified by a key
+  There can be only one world, so to identify the world we only need to provide
+  the =::kind=, so here's a schema for the world id and the world portion of the
+  =::id= schema:
 
   #+BEGIN_SRC clojure
-    (s/def ::component-key keyword?)
+    (s/def ::world-id (s/and (s/keys :req [::kind]) #(= :world (::kind %))))
+    (defmethod id-spec :world [_] ::world-id)
   #+END_SRC
 
-  which is unique /in context of the entity/ to which the component belongs. In
-  other words, we'll need to use both the entity key (to be defined later) and
-  the component key to form a unique component identifier. Of course we'll also
-  set =::kind= to =:component=.
-
-  To simplify lookup operations, we'll also include the key of the system
-  (again, defined later) to which the component belongs and the component type
-  which will be used in dispatching of multimethods to give each type of
-  component a different behavior. Here's then the schema of a component id:
+  Here are schemas for the world object:
 
   #+BEGIN_SRC clojure
-    (s/def ::component-id (s/and
-                           (s/keys :req [::kind
-                                         ::entity-key ::component-key
-                                         ::system-key ::component-type])
-                           #(= (::kind %) :component)))
+    (s/def ::world
+      (s/and
+       (s/keys :req [::kind ::entities ::systems ::time ::event-queue])
+       #(= :world (::kind %))))
+
+    (defmethod object-spec :world [_] ::world)
   #+END_SRC
 
-  A component /object/ will consist of the component id and any other keys
-  dependent on the type of the component, so our schema for a component
-  object is the same as for the component id:
+  As we could see above, a world object holds everything:
+
+  the map of entities (which will contain components):
 
   #+BEGIN_SRC clojure
-    (s/def ::component ::component-id)
+  (s/def ::entities (s/map-of ::entity-key ::entity))
   #+END_SRC
 
-  And finally we fill the component methods for the general =::object= and
-  =::id= schemas:
+  the map of systems:
 
   #+BEGIN_SRC clojure
-    (defmethod object-spec :component [_] ::component)
-    (defmethod id-spec :component [_] ::component-id)
+  (s/def ::systems (s/map-of ::system-key ::system))
   #+END_SRC
 
-** Constructors
-  
+  current time:
+
+  #+BEGIN_SRC clojure
+  (s/def ::time integer?)
+  #+END_SRC
+
+  and an event queue (TODO: spec in that module).
+
+  Here's a function to create a new, empty world object:
+
   #+BEGIN_SRC clojure
 
-    (defn component [entity key system type]
-      {::kind :component
-       ::entity-key (entity-key entity)
-       ::system-key (system-key system)
-       ::type type
-       ::component-key key})
-
-    (defn component-id [entity key]
-      {::kind :component
-       ::entity-key (entity-key entity)
-       ::component-key key})
-
-    (defn component? [x]
-      (= (::kind x) :component))
+    (defn world []
+      {::kind :world
+       ::entities {}
+       ::systems {}
+       ::time 0
+       ::event-queue (eq/create)})
+    (s/fdef world
+      :args (s/cat)
+      :ret (s/and ::world ::world-id ::id))
 
   #+END_SRC
 
-** Predicates / operations
+  and functions to create the world id and to check if a given value (any value)
+  is a world id or not:
 
   #+BEGIN_SRC clojure
+    (defn world-id [] {::kind :world})
+    (s/fdef world-id :args (s/cat) :ret (s/and ::world-id ::id))
 
-    (defn component? [x]
-      (= (::kind x) :component))
+    (defn world-id? [x] (= (::kind x) :world))
+    (s/fdef world-id? :args (s/cat :x anything?) :ret (s/and boolean?))
 
   #+END_SRC
 
@@ -226,6 +268,80 @@ of the system to which it belongs).
 
   #+END_SRC
 
+* Component
+
+** Schemas
+
+  A component will be identified by a key
+
+  #+BEGIN_SRC clojure
+    (s/def ::component-key keyword?)
+  #+END_SRC
+
+  which is unique /in context of the entity/ to which the component belongs. In
+  other words, we'll need to use both the entity key (to be defined later) and
+  the component key to form a unique component identifier. Of course we'll also
+  set =::kind= to =:component=.
+
+  To simplify lookup operations, we'll also include the key of the system
+  (again, defined later) to which the component belongs and the component type
+  which will be used in dispatching of multimethods to give each type of
+  component a different behavior. Here's then the schema of a component id:
+
+  #+BEGIN_SRC clojure
+    (s/def ::component-id (s/and
+                           (s/keys :req [::kind
+                                         ::entity-key ::component-key
+                                         ::system-key ::component-type])
+                           #(= (::kind %) :component)))
+  #+END_SRC
+
+  A component /object/ will consist of the component id and any other keys
+  dependent on the type of the component, so our schema for a component
+  object is the same as for the component id:
+
+  #+BEGIN_SRC clojure
+    (s/def ::component ::component-id)
+  #+END_SRC
+
+  And finally we fill the component methods for the general =::object= and
+  =::id= schemas:
+
+  #+BEGIN_SRC clojure
+    (defmethod object-spec :component [_] ::component)
+    (defmethod id-spec :component [_] ::component-id)
+  #+END_SRC
+
+** Constructors
+  
+  #+BEGIN_SRC clojure
+
+    (defn component [entity key system type]
+      {::kind :component
+       ::entity-key (entity-key entity)
+       ::system-key (system-key system)
+       ::type type
+       ::component-key key})
+
+    (defn component-id [entity key]
+      {::kind :component
+       ::entity-key (entity-key entity)
+       ::component-key key})
+
+    (defn component? [x]
+      (= (::kind x) :component))
+
+  #+END_SRC
+
+** Predicates / operations
+
+  #+BEGIN_SRC clojure
+
+    (defn component? [x]
+      (= (::kind x) :component))
+
+  #+END_SRC
+
 * Entity
   
   *TODO*
@@ -292,78 +408,6 @@ of the system to which it belongs).
 
   #+END_SRC
   
-* World
-
-  There can be only one world, so to identify the world we only need to provide
-  the =::kind=, so here's a schema for the world id and the world portion of the
-  =::id= schema:
-
-  #+BEGIN_SRC clojure
-    (s/def ::world-id (s/and (s/keys :req [::kind]) #(= :world (::kind %))))
-    (defmethod id-spec :world [_] ::world-id)
-  #+END_SRC
-
-  Here are schemas for the world object:
-
-  #+BEGIN_SRC clojure
-    (s/def ::world
-      (s/and
-       (s/keys :req [::kind ::entities ::systems ::time ::event-queue])
-       #(= :world (::kind %))))
-
-    (defmethod object-spec :world [_] ::world)
-  #+END_SRC
-
-  As we could see above, a world object holds everything:
-
-  the map of entities (which will contain components):
-
-  #+BEGIN_SRC clojure
-  (s/def ::entities (s/map-of ::entity-key ::entity))
-  #+END_SRC
-
-  the map of systems:
-
-  #+BEGIN_SRC clojure
-  (s/def ::systems (s/map-of ::system-key ::system))
-  #+END_SRC
-
-  current time:
-
-  #+BEGIN_SRC clojure
-  (s/def ::time integer?)
-  #+END_SRC
-
-  and an event queue (TODO: spec in that module).
-
-  Here's a function to create a new, empty world object:
-
-  #+BEGIN_SRC clojure
-
-    (defn world []
-      {::kind :world
-       ::entities {}
-       ::systems {}
-       ::time 0
-       ::event-queue (eq/create)})
-    (s/fdef world
-      :args (s/cat)
-      :ret (s/and ::world ::world-id ::id))
-
-  #+END_SRC
-
-  and functions to create the world id and to check if a given value (any value)
-  is a world id or not:
-
-  #+BEGIN_SRC clojure
-    (defn world-id [] {::kind :world})
-    (s/fdef world-id :args (s/cat) :ret (s/and ::world-id ::id))
-
-    (defn world-id? [x] (= (::kind x) :world))
-    (s/fdef world-id? :args (s/cat :x anything?) :ret (s/and boolean?))
-
-  #+END_SRC
-
 * Inne
 
   #+BEGIN_SRC clojure

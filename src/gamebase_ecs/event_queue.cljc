@@ -12,6 +12,11 @@
   (when (= event '())
     (println "ALARM! event is ()!!!")
     (assert false))
+  (when (nil? (::time event))
+    (println "ALARM! ::time of event is nil!!!")
+    (assert false))
+  ;; (when-not (= (first event) :update)
+  ;;   (println (str "[QUEUE] <- " (pr-str event))))
   (let [{:keys [set_ sq n]} q]
     (assoc q
            :set_ (conj set_ (assoc event :sq sq))
@@ -23,9 +28,11 @@
 
 (defn take-event [q]
   (let [all (:set_ q)
-        all-sorted (sort-by #(vector (::time %) (:sq %)) all)
+        all-sorted (sort-by #(vector (::time %) (:priority %) (:sq %)) all)
         soonest-event (first all-sorted)
         rest-of-events (rest all-sorted)]
+    ;; (when-not (= (first soonest-event) :update)
+    ;;   (println (str "[QUEUE] => " (pr-str soonest-event))))
     [soonest-event
      (assoc q
             :set_ rest-of-events
@@ -42,5 +49,5 @@
   (let [all (:set_ q)]
     [(->> all
           (filter #(<= (::time %) time))
-          (sort-by #(vector (::time %) (:sq %))))
+          (sort-by #(vector (::time %) (:priority %) (:sq %))))
      (assoc q :set_ (remove #(<= (::time %) time) all))]))
