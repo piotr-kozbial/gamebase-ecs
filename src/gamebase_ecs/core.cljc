@@ -353,7 +353,7 @@
     {::target-id target-id
      ::msg msg
      :priority 0
-     :gamebase-ecs.event-queue/time time}))
+     ::time time}))
 
 ;;;;; Putting events into queue
 
