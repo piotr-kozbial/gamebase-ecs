@@ -12,8 +12,8 @@
   (when (= event '())
     (println "ALARM! event is ()!!!")
     (assert false))
-  (when (nil? (::time event))
-    (println "ALARM! ::time of event is nil!!!")
+  (when (nil? (:gamebase-ecs.core/time event))
+    (println "ALARM! :gamebase-ecs.core/time of event is nil!!!")
     (assert false))
   ;; (when-not (= (first event) :update)
   ;;   (println (str "[QUEUE] <- " (pr-str event))))
@@ -28,7 +28,7 @@
 
 (defn take-event [q]
   (let [all (:set_ q)
-        all-sorted (sort-by #(vector (::time %) (:priority %) (:sq %)) all)
+        all-sorted (sort-by #(vector (:gamebase-ecs.core/time %) (:priority %) (:sq %)) all)
         soonest-event (first all-sorted)
         rest-of-events (rest all-sorted)]
     ;; (when-not (= (first soonest-event) :update)
@@ -41,13 +41,13 @@
 (defn soonest-event-time [q]
   (let [all (:set_ q)]
     (->> all
-         (map ::time)
+         (map :gamebase-ecs.core/time)
          (sort)
          (first))))
 
 (defn take-events-until  [q time]
   (let [all (:set_ q)]
     [(->> all
-          (filter #(<= (::time %) time))
-          (sort-by #(vector (::time %) (:priority %) (:sq %))))
-     (assoc q :set_ (remove #(<= (::time %) time) all))]))
+          (filter #(<= (:gamebase-ecs.core/time %) time))
+          (sort-by #(vector (:gamebase-ecs.core/time %) (:priority %) (:sq %))))
+     (assoc q :set_ (remove #(<= (:gamebase-ecs.core/time %) time) all))]))
