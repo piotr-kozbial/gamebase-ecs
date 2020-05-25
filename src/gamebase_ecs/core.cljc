@@ -1,7 +1,7 @@
 (ns gamebase-ecs.core
   (:require [gamebase-ecs.event-queue :as eq]))
 
-(defmulti query (fn [object query-key & args]
+(defmulti query (fn [world object query-key & args]
                   (case (::kind object)
                     ;; these instances to be handled on a global (world) level
                     :world
